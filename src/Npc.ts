@@ -40,13 +40,6 @@ export class Npc {
   }
 
   private checkCollisions(world: World) {
-    // World borders
-    if (this.x < 0) {
-      this.direction = 1;
-    } else if (this.x + this.width > world.width) {
-      this.direction = -1;
-    }
-
     // Floor
     const bottomY = this.y + this.height;
     const leftX = this.x + 1;
@@ -112,6 +105,9 @@ export class Npc {
 
   dig(world: World) {
     const targetY = this.y + this.height + 1;
+    const targetBlock = world.getTileAtPixel(this.x, targetY);
+    if (targetBlock === "stone") return;
+
     world.setTileAtPixel(this.x + this.width / 2, targetY, "empty");
   }
 

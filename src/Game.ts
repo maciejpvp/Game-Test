@@ -6,12 +6,23 @@ export class Game {
   private canvas: HTMLCanvasElement;
   world: World;
 
-  private worldWidth = 25;
-  private worldHeight = 18;
+  private worldWidth = 60;
+  private worldHeight = 40;
   private tileSize = 32;
 
   private npcs: Npc[] = [];
   private lastTime = 0;
+
+  // Camera
+  private cameraX = 0;
+  private cameraY = 0;
+  private cameraZoom = 1;
+
+  private isDragging = false;
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private cameraStartX = 0;
+  private cameraStartY = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -29,25 +40,73 @@ export class Game {
     window.addEventListener("resize", () => this.resize());
     this.canvas.addEventListener("click", this.handleClick);
 
+    // Dragging
+    this.canvas.addEventListener("mousedown", (e) => this.startDrag(e));
+    this.canvas.addEventListener("mousemove", (e) => this.drag(e));
+    this.canvas.addEventListener("mouseup", () => (this.isDragging = false));
+    this.canvas.addEventListener("mouseleave", () => (this.isDragging = false));
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        this.lastTime = performance.now();
+      }
+    });
+
+    // Zooming
+    this.canvas.addEventListener("wheel", (e) => this.zoom(e));
+
     requestAnimationFrame(this.loop);
+  }
+
+  private startDrag(e: MouseEvent) {
+    this.isDragging = true;
+    this.dragStartX = e.clientX;
+    this.dragStartY = e.clientY;
+    this.cameraStartX = this.cameraX;
+    this.cameraStartY = this.cameraY;
+  }
+
+  private drag(e: MouseEvent) {
+    if (!this.isDragging) return;
+    const dx = (e.clientX - this.dragStartX) / this.cameraZoom;
+    const dy = (e.clientY - this.dragStartY) / this.cameraZoom;
+    this.cameraX = this.cameraStartX - dx;
+    this.cameraY = this.cameraStartY - dy;
+  }
+
+  private zoom(e: WheelEvent) {
+    e.preventDefault();
+    const zoomFactor = 1.1;
+    const oldZoom = this.cameraZoom;
+    if (e.deltaY < 0) {
+      this.cameraZoom *= zoomFactor;
+    } else {
+      this.cameraZoom /= zoomFactor;
+    }
+    // Adjust camera to zoom towards mouse pointer
+    const rect = this.canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / oldZoom + this.cameraX;
+    const my = (e.clientY - rect.top) / oldZoom + this.cameraY;
+    this.cameraX = mx - (e.clientX - rect.left) / this.cameraZoom;
+    this.cameraY = my - (e.clientY - rect.top) / this.cameraZoom;
   }
 
   private handleClick = (e: MouseEvent) => {
     const rect = this.canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    const mouseX = (e.clientX - rect.left) / this.cameraZoom + this.cameraX;
+    const mouseY = (e.clientY - rect.top) / this.cameraZoom + this.cameraY;
 
-    // Convert to world coords
-    const scaleX = this.canvas.width / (this.worldWidth * this.tileSize);
-    const scaleY = this.canvas.height / (this.worldHeight * this.tileSize);
-    const worldX = mouseX / scaleX;
-    const worldY = mouseY / scaleY;
-
-    // Check NPCs
     for (const npc of this.npcs) {
-      if (npc.containsPoint(worldX, worldY)) {
+      if (npc.containsPoint(mouseX, mouseY)) {
         npc.onClick(this.world);
       }
+    }
+    // Left click
+    if (e.shiftKey) {
+      // Shift + left click = remove block
+      this.world.handleEditorClick(mouseX, mouseY, false);
+    } else {
+      // Left click = add block
+      this.world.handleEditorClick(mouseX, mouseY, true);
     }
   };
 
@@ -66,11 +125,11 @@ export class Game {
     const { ctx, canvas } = this;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const scaleX = canvas.width / (this.worldWidth * this.tileSize);
-    const scaleY = canvas.height / (this.worldHeight * this.tileSize);
     ctx.save();
-    ctx.scale(scaleX, scaleY);
+    ctx.scale(this.cameraZoom, this.cameraZoom);
+    ctx.translate(-this.cameraX, -this.cameraY);
 
+    // Background
     ctx.fillStyle = "#222";
     ctx.fillRect(
       0,
@@ -79,8 +138,10 @@ export class Game {
       this.worldHeight * this.tileSize,
     );
 
+    // World
     this.world.draw(ctx);
 
+    // NPCs
     for (const npc of this.npcs) {
       npc.draw(ctx);
     }
@@ -89,6 +150,11 @@ export class Game {
   }
 
   private loop = (time: number) => {
+    if (document.hidden) {
+      requestAnimationFrame(this.loop);
+      return;
+    }
+
     const dt = (time - this.lastTime) / 1000;
     this.lastTime = time;
 
