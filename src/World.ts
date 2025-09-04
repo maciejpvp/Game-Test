@@ -1,13 +1,20 @@
 export type Tile = "empty" | "dirt" | "stone";
 
+type Props = {
+  width: number;
+  height: number;
+  blocks: Tile[][];
+  tileSize?: number;
+};
+
 export class World {
   tiles: Tile[][];
   tileSize: number;
 
   // Editor mode flag
-  static EDITOR = false;
+  static EDITOR = true;
 
-  constructor(width: number, height: number, tileSize = 12) {
+  constructor({ width, height, blocks, tileSize = 32 }: Props) {
     this.tileSize = tileSize;
 
     // Generate simple ground
@@ -30,13 +37,18 @@ export class World {
     for (let y = 0; y < this.tiles.length; y++) {
       for (let x = 0; x < this.tiles[y].length; x++) {
         const tile = this.tiles[y][x];
+        let color = "#fff";
+
         if (tile === "dirt") {
-          ctx.fillStyle = "#8B4513";
+          color = "#8B4513";
         } else if (tile === "stone") {
-          ctx.fillStyle = "#888";
+          color = "#888";
         } else {
           continue; // skip empty
         }
+
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
 
         ctx.fillRect(
           x * this.tileSize,
@@ -44,7 +56,6 @@ export class World {
           this.tileSize,
           this.tileSize,
         );
-        ctx.strokeStyle = "#000";
         ctx.strokeRect(
           x * this.tileSize,
           y * this.tileSize,
@@ -71,6 +82,7 @@ export class World {
 
   handleEditorClick(px: number, py: number, leftShift: boolean) {
     if (!World.EDITOR) return;
+    console.log(this.tiles);
     if (leftShift) {
       this.setTileAtPixel(px, py, "dirt"); // place block
     } else {

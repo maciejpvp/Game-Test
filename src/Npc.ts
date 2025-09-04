@@ -1,4 +1,5 @@
 import { World } from "./World";
+import { EndPortal } from "./EndPortal";
 
 type Props = {
   x: number;
@@ -16,6 +17,7 @@ export class Npc {
   speed: number;
   direction: 1 | -1;
   vy: number;
+  survived = false;
 
   constructor({ x, y, width = 10, height = 15, speed = 50 }: Props) {
     this.x = x;
@@ -27,7 +29,9 @@ export class Npc {
     this.vy = 0;
   }
 
-  update(dt: number, world: World) {
+  update(dt: number, world: World, portal: EndPortal) {
+    if (this.survived) return;
+
     // Horizontal movement
     this.x += this.speed * this.direction * dt;
 
@@ -37,10 +41,12 @@ export class Npc {
 
     // Collision handling
     this.checkCollisions(world);
+
+    // Portal detection
+    this.checkPortal(portal);
   }
 
   private checkCollisions(world: World) {
-    // Floor
     const bottomY = this.y + this.height;
     const leftX = this.x + 1;
     const rightX = this.x + this.width - 1;
@@ -57,7 +63,6 @@ export class Npc {
       this.vy = 0;
     }
 
-    // Horizontal collision with blocks
     const topOffset = 1;
     const bottomOffset = this.height - 1;
 
@@ -89,17 +94,29 @@ export class Npc {
     }
   }
 
+  private checkPortal(portal: EndPortal) {
+    if (
+      this.x < portal.x + portal.width &&
+      this.x + this.width > portal.x &&
+      this.y < portal.y + portal.height &&
+      this.y + this.height > portal.y
+    ) {
+      this.survived = true;
+    }
+  }
+
   draw(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = "red";
+    ctx.fillStyle = this.survived ? "green" : "red";
     ctx.fillRect(this.x, this.y, this.width, this.height);
   }
 
   containsPoint(px: number, py: number): boolean {
+    const clickPadding = 20;
     return (
-      px >= this.x &&
-      px <= this.x + this.width &&
-      py >= this.y &&
-      py <= this.y + this.height
+      Math.abs(px - (this.x + this.width / 2)) <=
+        this.width / 2 + clickPadding &&
+      Math.abs(py - (this.y + this.height / 2)) <=
+        this.height / 2 + clickPadding
     );
   }
 

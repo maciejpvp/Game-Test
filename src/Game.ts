@@ -1,10 +1,14 @@
+import { EndPortal } from "./EndPortal";
+import { Levels, type Level } from "./Levels";
 import { Npc } from "./Npc";
 import { World } from "./World";
 
 export class Game {
   private ctx: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
+  private level: Level;
   world: World;
+  portal: EndPortal;
 
   private worldWidth = 60;
   private worldHeight = 40;
@@ -14,8 +18,8 @@ export class Game {
   private lastTime = 0;
 
   // Camera
-  private cameraX = 0;
-  private cameraY = 0;
+  private cameraX = -5;
+  private cameraY = 350;
   private cameraZoom = 1;
 
   private isDragging = false;
@@ -27,13 +31,34 @@ export class Game {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+    this.level = Levels["First"];
+
+    //Setup Camera
+    this.cameraX = this.level.cameraStartPos[0];
+    this.cameraY = this.level.cameraStartPos[1];
+    this.cameraZoom = this.level.cameraStartZoom;
+
     this.resize();
 
-    this.world = new World(this.worldWidth, this.worldHeight, this.tileSize);
+    this.world = new World({
+      width: this.worldWidth,
+      height: this.worldHeight,
+      tileSize: this.tileSize,
+      blocks: [],
+    });
+    this.portal = new EndPortal(
+      this.level.endPortalCords[0],
+      this.level.endPortalCords[1],
+      50,
+      80,
+    );
 
     this.npcs.push(
       ...[...Array(10)].map((_, index) => {
-        return new Npc({ x: 100 + 50 * index, y: 100 });
+        return new Npc({
+          x: this.level.npcSpawnpoint[0] + 50 * index,
+          y: this.level.npcSpawnpoint[1],
+        });
       }),
     );
 
@@ -117,7 +142,12 @@ export class Game {
 
   private update(dt: number) {
     for (const npc of this.npcs) {
-      npc.update(dt, this.world);
+      npc.update(dt, this.world, this.portal);
+    }
+
+    // Game ends if all NPCs survived
+    if (this.npcs.every((npc) => npc.survived)) {
+      alert("All NPCs survived! Game Over 🎉");
     }
   }
 
@@ -140,6 +170,7 @@ export class Game {
 
     // World
     this.world.draw(ctx);
+    this.portal.draw(ctx);
 
     // NPCs
     for (const npc of this.npcs) {
