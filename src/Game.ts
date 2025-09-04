@@ -1,14 +1,16 @@
 import { EndPortal } from "./EndPortal";
 import { Levels, type Level } from "./Levels";
 import { Npc } from "./Npc";
+import { StartPortal } from "./StartPortal";
 import { World } from "./World";
 
 export class Game {
   private ctx: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
   private level: Level;
-  world: World;
-  portal: EndPortal;
+  private world: World;
+  private portal: EndPortal;
+  private startPortal: StartPortal;
 
   private worldWidth = 60;
   private worldHeight = 40;
@@ -44,7 +46,7 @@ export class Game {
       width: this.worldWidth,
       height: this.worldHeight,
       tileSize: this.tileSize,
-      blocks: [],
+      blocks: this.level.blocks,
     });
     this.portal = new EndPortal(
       this.level.endPortalCords[0],
@@ -52,15 +54,11 @@ export class Game {
       50,
       80,
     );
-
-    this.npcs.push(
-      ...[...Array(10)].map((_, index) => {
-        return new Npc({
-          x: this.level.npcSpawnpoint[0] + 50 * index,
-          y: this.level.npcSpawnpoint[1],
-        });
-      }),
-    );
+    this.startPortal = new StartPortal({
+      x: this.level.npcSpawnpoint[0],
+      y: this.level.npcSpawnpoint[1],
+      npcCount: 10,
+    });
 
     window.addEventListener("resize", () => this.resize());
     this.canvas.addEventListener("click", this.handleClick);
@@ -141,12 +139,16 @@ export class Game {
   }
 
   private update(dt: number) {
+    const now = performance.now();
+
+    this.startPortal.update(now, this.npcs);
+
     for (const npc of this.npcs) {
       npc.update(dt, this.world, this.portal);
     }
 
     // Game ends if all NPCs survived
-    if (this.npcs.every((npc) => npc.survived)) {
+    if (this.npcs.length !== 0 && this.npcs.every((npc) => npc.survived)) {
       alert("All NPCs survived! Game Over 🎉");
     }
   }
@@ -171,6 +173,7 @@ export class Game {
     // World
     this.world.draw(ctx);
     this.portal.draw(ctx);
+    this.startPortal.draw(ctx);
 
     // NPCs
     for (const npc of this.npcs) {

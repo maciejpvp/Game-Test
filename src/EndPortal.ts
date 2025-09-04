@@ -22,12 +22,6 @@ export class EndPortal {
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    const g = ctx.createLinearGradient(
-      this.x,
-      this.y,
-      this.x,
-      this.y + this.height,
-    );
     ctx.fillStyle = "#5600bb";
     ctx.fillRect(this.x, this.y, this.width, this.height);
 

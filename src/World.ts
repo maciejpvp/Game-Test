@@ -14,41 +14,27 @@ export class World {
   // Editor mode flag
   static EDITOR = true;
 
-  constructor({ width, height, blocks, tileSize = 32 }: Props) {
+  constructor({ blocks, tileSize = 32 }: Props) {
     this.tileSize = tileSize;
 
-    // Generate simple ground
-    this.tiles = Array.from({ length: height }, (_, y) =>
-      Array.from({ length: width }, (_, x) => {
-        // Stone border
-        if (x === 0 || x === width - 1 || y === 0 || y === height - 1)
-          return "stone";
+    this.tiles = blocks;
 
-        // Two layers of dirt at the bottom
-        if (y >= height - 4) return "dirt";
-
-        // Empty space
-        return "empty";
-      }),
-    );
+    //eslint-disable-next-line
+    //@ts-expect-error
+    document.createEmptyWorld = this.createEmptyWorld.bind(this);
   }
 
   draw(ctx: CanvasRenderingContext2D) {
     for (let y = 0; y < this.tiles.length; y++) {
       for (let x = 0; x < this.tiles[y].length; x++) {
         const tile = this.tiles[y][x];
-        let color = "#fff";
-
         if (tile === "dirt") {
-          color = "#8B4513";
+          ctx.fillStyle = "#8B4513"; // brown dirt
         } else if (tile === "stone") {
-          color = "#888";
+          ctx.fillStyle = "#555"; // grey stone
         } else {
-          continue; // skip empty
+          ctx.fillStyle = "#aad3f5"; // light blue empty tile
         }
-
-        ctx.fillStyle = color;
-        ctx.strokeStyle = color;
 
         ctx.fillRect(
           x * this.tileSize,
@@ -56,12 +42,16 @@ export class World {
           this.tileSize,
           this.tileSize,
         );
-        ctx.strokeRect(
-          x * this.tileSize,
-          y * this.tileSize,
-          this.tileSize,
-          this.tileSize,
-        );
+
+        if (tile !== "empty") {
+          ctx.strokeStyle = "#000"; // black border for blocks
+          ctx.strokeRect(
+            x * this.tileSize,
+            y * this.tileSize,
+            this.tileSize,
+            this.tileSize,
+          );
+        }
       }
     }
   }
@@ -88,6 +78,20 @@ export class World {
     } else {
       this.setTileAtPixel(px, py, "empty"); // remove block
     }
+  }
+
+  createEmptyWorld(width: number, height: number) {
+    const blocks: Tile[][] = Array.from({ length: height }, (_, y) =>
+      Array.from({ length: width }, (_, x) => {
+        // Stone on borders
+        if (y === 0 || y === height - 1 || x === 0 || x === width - 1)
+          return "stone";
+        return "empty"; // empty inside
+      }),
+    );
+
+    this.tiles = blocks; // load into world
+    return blocks; // also return for console
   }
 
   get width(): number {
