@@ -12,7 +12,6 @@ export class World {
   tileSize: number;
 
   // Editor mode flag
-  static EDITOR = true;
 
   constructor({ blocks, tileSize = 32 }: Props) {
     this.tileSize = tileSize;
@@ -70,14 +69,8 @@ export class World {
     }
   }
 
-  handleEditorClick(px: number, py: number, leftShift: boolean) {
-    if (!World.EDITOR) return;
-    console.log(this.tiles);
-    if (leftShift) {
-      this.setTileAtPixel(px, py, "dirt"); // place block
-    } else {
-      this.setTileAtPixel(px, py, "empty"); // remove block
-    }
+  handleEditorClick(px: number, py: number, block: Tile) {
+    this.setTileAtPixel(px, py, block);
   }
 
   createEmptyWorld(width: number, height: number) {

@@ -2,9 +2,11 @@ import { EndPortal } from "./EndPortal";
 import { Levels, type Level } from "./Levels";
 import { Npc } from "./Npc";
 import { StartPortal } from "./StartPortal";
-import { World } from "./World";
+import { World, type Tile } from "./World";
 
 export class Game {
+  static EDITOR = true;
+
   private ctx: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
   private level: Level;
@@ -15,6 +17,8 @@ export class Game {
   private worldWidth = 60;
   private worldHeight = 40;
   private tileSize = 32;
+
+  private isMouseDown = false;
 
   private npcs: Npc[] = [];
   private lastTime = 0;
@@ -63,6 +67,10 @@ export class Game {
     window.addEventListener("resize", () => this.resize());
     this.canvas.addEventListener("click", this.handleClick);
 
+    if (Game.EDITOR) {
+      this.setupEditorControls();
+    }
+
     // Dragging
     this.canvas.addEventListener("mousedown", (e) => this.startDrag(e));
     this.canvas.addEventListener("mousemove", (e) => this.drag(e));
@@ -89,6 +97,9 @@ export class Game {
   }
 
   private drag(e: MouseEvent) {
+    //Disable Drag if editing
+    if (Game.EDITOR && e.altKey) return;
+
     if (!this.isDragging) return;
     const dx = (e.clientX - this.dragStartX) / this.cameraZoom;
     const dy = (e.clientY - this.dragStartY) / this.cameraZoom;
@@ -123,15 +134,46 @@ export class Game {
         npc.onClick(this.world);
       }
     }
-    // Left click
-    if (e.shiftKey) {
-      // Shift + left click = remove block
-      this.world.handleEditorClick(mouseX, mouseY, false);
-    } else {
-      // Left click = add block
-      this.world.handleEditorClick(mouseX, mouseY, true);
-    }
   };
+
+  private setupEditorControls() {
+    this.canvas.addEventListener("mousedown", (e) => {
+      this.isMouseDown = true;
+      this.handleEditorAction(e);
+    });
+
+    this.canvas.addEventListener("mouseup", () => {
+      this.isMouseDown = false;
+    });
+
+    this.canvas.addEventListener("mouseleave", () => {
+      this.isMouseDown = false;
+    });
+
+    this.canvas.addEventListener("mousemove", (e) => {
+      if (this.isMouseDown) {
+        this.handleEditorAction(e);
+      }
+    });
+  }
+
+  private handleEditorAction(e: MouseEvent) {
+    if (!e.altKey) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const mouseX = (e.clientX - rect.left) / this.cameraZoom + this.cameraX;
+    const mouseY = (e.clientY - rect.top) / this.cameraZoom + this.cameraY;
+
+    for (const npc of this.npcs) {
+      if (npc.containsPoint(mouseX, mouseY)) {
+        npc.onClick(this.world);
+        return; // stop painting if clicked NPC
+      }
+    }
+
+    const blockType: Tile = e.shiftKey ? "empty" : e.ctrlKey ? "stone" : "dirt";
+
+    this.world.handleEditorClick(mouseX, mouseY, blockType);
+  }
 
   private resize() {
     this.canvas.width = window.innerWidth;
