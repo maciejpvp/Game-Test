@@ -1,9 +1,11 @@
+import { decodeWorld, encodeWorld } from "./Utils/WorldCodec";
+
 export type Tile = "empty" | "dirt" | "stone";
 
 type Props = {
   width: number;
   height: number;
-  blocks: Tile[][];
+  blocks: string;
   tileSize?: number;
 };
 
@@ -13,14 +15,19 @@ export class World {
 
   // Editor mode flag
 
-  constructor({ blocks, tileSize = 32 }: Props) {
+  constructor({ width, height, blocks, tileSize = 32 }: Props) {
     this.tileSize = tileSize;
 
-    this.tiles = blocks;
+    const tiles = decodeWorld(blocks, width, height);
+
+    this.tiles = tiles;
 
     //eslint-disable-next-line
     //@ts-expect-error
     document.createEmptyWorld = this.createEmptyWorld.bind(this);
+    //eslint-disable-next-line
+    //@ts-expect-error
+    document.exportCurrentWorld = this.exportCurrentWorld.bind(this);
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -85,6 +92,10 @@ export class World {
 
     this.tiles = blocks; // load into world
     return blocks; // also return for console
+  }
+
+  exportCurrentWorld() {
+    return encodeWorld(this.tiles);
   }
 
   get width(): number {
