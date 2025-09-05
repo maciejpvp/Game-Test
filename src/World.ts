@@ -1,6 +1,6 @@
 import { decodeWorld, encodeWorld } from "./Utils/WorldCodec";
 
-export type Tile = "empty" | "dirt" | "stone";
+export type Tile = "empty" | "dirt" | "stone" | "invisible";
 
 type Props = {
   width: number;
@@ -49,7 +49,7 @@ export class World {
           this.tileSize,
         );
 
-        if (tile !== "empty") {
+        if (!["empty", "invisible"].includes(tile)) {
           ctx.strokeStyle = "#000"; // black border for blocks
           ctx.strokeRect(
             x * this.tileSize,
@@ -77,7 +77,7 @@ export class World {
   }
 
   handleEditorClick(px: number, py: number, block: Tile) {
-    this.setTileAtPixel(px, py, block);
+    this.setTileAtPixel(px, py, "invisible");
   }
 
   createEmptyWorld(width: number, height: number) {

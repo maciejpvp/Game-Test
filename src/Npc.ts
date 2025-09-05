@@ -29,7 +29,7 @@ export class Npc {
   private fallStartY: number | null;
   private readonly maxFallSafe = 32 * 3; // 3 Blocks
 
-  state: "inAir" | "walking" | "digging" | "death" = "inAir";
+  state: "inAir" | "walking" | "digging" | "death" | "stopothers" = "inAir";
 
   private digTimer = 0;
   private readonly digDuration = 1; // seconds
@@ -48,7 +48,7 @@ export class Npc {
   }
 
   update(dt: number, world: World, portal: EndPortal) {
-    if (this.survived || this.state === "death") return;
+    if (this.survived || ["death", "stopothers"].includes(this.state)) return;
 
     this.vy += 500 * dt;
     this.y += this.vy * dt;
@@ -66,7 +66,6 @@ export class Npc {
           this.x + this.width / 2,
           this.y + this.height + world.tileSize,
         );
-        console.log(blockBelow);
         this.performDig(world);
         this.digTimer = 0;
         if (blockBelow === "empty" || blockBelow === "stone") {
@@ -105,15 +104,12 @@ export class Npc {
     }
     //Start Falling
     if (this.state === "inAir" && this.fallStartY === null) {
-      console.log("Started Falling");
       this.fallStartY = this.y;
     }
     //End Falling
     if (this.state !== "inAir" && this.fallStartY !== null) {
       const distance = this.y - this.fallStartY;
-      console.log(`Distance: ${distance}`);
       if (distance > this.maxFallSafe) {
-        console.log("Give Damange");
         this.health -= distance;
       }
       this.fallStartY = null;
@@ -155,17 +151,20 @@ export class Npc {
       (tileFrontBottom && tileFrontBottom !== "empty")
     ) {
       let canStep = true;
-      for (let i = 1; i <= step; i++) {
-        const tileAboveBottom = world.getTileAtPixel(
-          frontX,
-          this.y + bottomOffset - i * world.tileSize,
-        );
-        if (!tileAboveBottom || tileAboveBottom !== "empty") {
-          canStep = false;
-          break;
+      if (tileFrontTop === "invisible") {
+        canStep = false;
+      } else {
+        for (let i = 1; i <= step; i++) {
+          const tileAboveBottom = world.getTileAtPixel(
+            frontX,
+            this.y + bottomOffset - i * world.tileSize,
+          );
+          if (!tileAboveBottom || tileAboveBottom !== "empty") {
+            canStep = false;
+            break;
+          }
         }
       }
-
       if (canStep) {
         this.y -= step * world.tileSize;
       } else {
@@ -189,6 +188,7 @@ export class Npc {
     if (this.survived) ctx.fillStyle = "green";
     else if (this.state === "digging") ctx.fillStyle = "orange";
     else if (this.state === "inAir") ctx.fillStyle = "blue";
+    else if (this.state === "death") ctx.fillStyle = "black";
     else ctx.fillStyle = "red"; // walking
 
     ctx.fillRect(this.x, this.y, this.width, this.height);
@@ -204,22 +204,35 @@ export class Npc {
     );
   }
 
+  centerNpcOnBlock(world: World) {
+    const currentBlockX = Math.floor(this.x / world.tileSize);
+    this.x = currentBlockX * world.tileSize + (world.tileSize - this.width) / 2;
+
+    // Also snap Y so feet align with block grid
+    const currentBlockY = Math.floor((this.y + this.height) / world.tileSize);
+    this.y = currentBlockY * world.tileSize - this.height;
+  }
+
   dig(world: World) {
-    if (this.state !== "digging") {
-      this.state = "digging";
-      this.digTimer = 0;
+    if (this.state === "digging") return;
 
-      const currentBlockX = Math.floor(this.x / world.tileSize);
-      this.x =
-        currentBlockX * world.tileSize + (world.tileSize - this.width) / 2;
+    this.state = "digging";
+    this.digTimer = 0;
+    this.centerNpcOnBlock(world);
+  }
 
-      // Also snap Y so feet align with block grid
-      const currentBlockY = Math.floor((this.y + this.height) / world.tileSize);
-      this.y = currentBlockY * world.tileSize - this.height;
-    }
+  stopOthers(world: World) {
+    if (this.state === "stopothers") return;
+
+    this.state = "stopothers";
+    world.setTileAtPixel(this.x, this.y, "invisible");
+    this.centerNpcOnBlock(world);
   }
 
   onClick({ action, world }: NpcOnClickProps) {
+    //You can only invoke action on npc thats walking
+    if (this.state !== "walking") return;
     if (action === "dig") this.dig(world);
+    if (action === "stopothers") this.stopOthers(world);
   }
 }

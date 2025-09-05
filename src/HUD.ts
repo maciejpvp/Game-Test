@@ -6,7 +6,7 @@ function defineButtons<T extends { label: string; id: string }>(
 
 const buttons = defineButtons([
   { label: "Dig", id: "dig" },
-  { label: "Nothing", id: "nothing" },
+  { label: "Stop Others", id: "stopothers" },
 ] as const);
 
 export type SelectedActionType = (typeof buttons)[number]["id"] | null;
@@ -23,9 +23,9 @@ export class HUD {
     // Create container div
     this.container = document.createElement("div");
     this.container.style.position = "absolute";
-    this.container.style.top = "10px";
+    this.container.style.bottom = "10px";
     this.container.style.left = "10px";
-    this.container.style.padding = "10px";
+    this.container.style.padding = "8px";
     this.container.style.backgroundColor = "rgba(0,0,0,0.5)";
     this.container.style.borderRadius = "8px";
     this.container.style.zIndex = "1000";
@@ -33,11 +33,9 @@ export class HUD {
     this.container.style.gap = "5px";
     document.body.appendChild(this.container);
 
-    // Add Dig button
     for (const btn of buttons) {
       this.addButton(btn.label, () => {
         this.selectedAction = btn.id;
-        console.log("Selected Dig action");
       });
     }
   }
@@ -47,6 +45,7 @@ export class HUD {
     btn.textContent = name;
     btn.style.padding = "5px 10px";
     btn.style.cursor = "pointer";
+    btn.style.fontSize = "16px";
     btn.onclick = callback;
     this.container.appendChild(btn);
   }

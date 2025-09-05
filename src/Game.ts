@@ -134,7 +134,6 @@ export class Game {
 
     for (const npc of this.npcs) {
       if (npc.containsPoint(mouseX, mouseY)) {
-        console.log(`Called on click on: ${npc.x}`);
         npc.onClick({ action: this.hud.selectedAction, world: this.world });
         break;
       }
