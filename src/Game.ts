@@ -64,7 +64,7 @@ export class Game {
     this.startPortal = new StartPortal({
       x: this.level.npcSpawnpoint[0],
       y: this.level.npcSpawnpoint[1],
-      npcCount: 10,
+      npcCount: this.level.npcCount,
     });
 
     window.addEventListener("resize", () => this.resize());

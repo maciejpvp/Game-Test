@@ -1,5 +1,6 @@
 export type Level = {
   npcSpawnpoint: [number, number];
+  npcCount: number;
   endPortalCords: [number, number];
   blocks: string;
   cameraStartPos: [number, number];
@@ -9,6 +10,7 @@ export type Level = {
 export const Levels: Record<string, Level> = {
   First: {
     npcSpawnpoint: [100, 205],
+    npcCount: 10,
     endPortalCords: [1350, 655],
     cameraStartPos: [0, 0],
     cameraStartZoom: 1,

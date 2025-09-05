@@ -18,9 +18,9 @@ export class HUD {
 
   container: HTMLDivElement;
   selectedAction: SelectedActionType = null;
+  buttonElements: Map<string, HTMLButtonElement> = new Map();
 
   constructor() {
-    // Create container div
     this.container = document.createElement("div");
     this.container.style.position = "absolute";
     this.container.style.bottom = "10px";
@@ -33,20 +33,42 @@ export class HUD {
     this.container.style.gap = "5px";
     document.body.appendChild(this.container);
 
-    for (const btn of buttons) {
-      this.addButton(btn.label, () => {
-        this.selectedAction = btn.id;
-      });
+    for (const btn of HUD.buttons) {
+      this.addButton(btn.label, btn.id);
     }
   }
 
-  addButton(name: string, callback: () => void) {
+  private addButton(label: string, id: SelectedActionType) {
+    if (!id) return;
     const btn = document.createElement("button");
-    btn.textContent = name;
+    btn.textContent = label;
     btn.style.padding = "5px 10px";
     btn.style.cursor = "pointer";
     btn.style.fontSize = "16px";
-    btn.onclick = callback;
+    btn.style.border = "2px solid #444";
+    btn.style.borderRadius = "6px";
+    btn.style.background = "#eee";
+
+    btn.onclick = () => {
+      this.selectedAction = id;
+      this.updateButtonStates();
+    };
+
     this.container.appendChild(btn);
+    this.buttonElements.set(id, btn);
+  }
+
+  private updateButtonStates() {
+    for (const [id, btn] of this.buttonElements.entries()) {
+      if (id === this.selectedAction) {
+        btn.style.background = "#aaa"; // pressed look
+        btn.style.transform = "translateY(2px)";
+        btn.style.boxShadow = "inset 2px 2px 4px rgba(0,0,0,0.5)";
+      } else {
+        btn.style.background = "#eee"; // normal look
+        btn.style.transform = "none";
+        btn.style.boxShadow = "none";
+      }
+    }
   }
 }
