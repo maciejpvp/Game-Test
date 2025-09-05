@@ -1,5 +1,6 @@
 import { World } from "./World";
 import { EndPortal } from "./EndPortal";
+import type { SelectedActionType } from "./HUD";
 
 type Props = {
   x: number;
@@ -7,6 +8,11 @@ type Props = {
   width?: number;
   height?: number;
   speed?: number;
+};
+
+type NpcOnClickProps = {
+  action: SelectedActionType;
+  world: World;
 };
 
 export class Npc {
@@ -187,7 +193,7 @@ export class Npc {
     }
   }
 
-  onClick(world: World) {
-    this.dig(world);
+  onClick({ action, world }: NpcOnClickProps) {
+    if (action === "dig") this.dig(world);
   }
 }

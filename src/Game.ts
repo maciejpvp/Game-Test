@@ -1,4 +1,5 @@
 import { EndPortal } from "./EndPortal";
+import { HUD } from "./HUD";
 import { Levels, type Level } from "./Levels";
 import { Npc } from "./Npc";
 import { StartPortal } from "./StartPortal";
@@ -13,6 +14,7 @@ export class Game {
   private world: World;
   private portal: EndPortal;
   private startPortal: StartPortal;
+  private hud: HUD;
 
   private worldWidth = 60;
   private worldHeight = 40;
@@ -38,6 +40,7 @@ export class Game {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.level = Levels["First"];
+    this.hud = new HUD();
 
     //Setup Camera
     this.cameraX = this.level.cameraStartPos[0];
@@ -132,7 +135,7 @@ export class Game {
     for (const npc of this.npcs) {
       if (npc.containsPoint(mouseX, mouseY)) {
         console.log(`Called on click on: ${npc.x}`);
-        npc.onClick(this.world);
+        npc.onClick({ action: this.hud.selectedAction, world: this.world });
         break;
       }
     }
@@ -167,7 +170,7 @@ export class Game {
 
     for (const npc of this.npcs) {
       if (npc.containsPoint(mouseX, mouseY)) {
-        npc.onClick(this.world);
+        npc.onClick({ action: this.hud.selectedAction, world: this.world });
         return; // stop painting if clicked NPC
       }
     }
