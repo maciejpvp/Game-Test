@@ -15,9 +15,14 @@ export class Npc {
   width: number;
   height: number;
   speed: number;
-  direction: 1 | -1;
+  direction: number;
   vy: number;
   survived = false;
+
+  state: "inAir" | "walking" | "digging" = "inAir";
+
+  private digTimer = 0;
+  private readonly digDuration = 1; // seconds
 
   constructor({ x, y, width = 10, height = 15, speed = 50 }: Props) {
     this.x = x;
@@ -32,21 +37,38 @@ export class Npc {
   update(dt: number, world: World, portal: EndPortal) {
     if (this.survived) return;
 
-    // Horizontal movement
-    this.x += this.speed * this.direction * dt;
-
-    // Gravity
     this.vy += 500 * dt;
     this.y += this.vy * dt;
 
-    // Collision handling
+    if (this.state !== "digging") {
+      this.x += this.speed * this.direction * dt;
+    }
+
     this.checkCollisions(world);
 
-    // Portal detection
+    if (this.state === "digging") {
+      this.digTimer += dt;
+      if (this.digTimer >= this.digDuration) {
+        this.performDig(world);
+        this.digTimer = 0;
+      }
+    }
+
+    this.updateState(world);
+
     this.checkPortal(portal);
   }
 
-  private checkCollisions(world: World) {
+  private performDig(world: World) {
+    const targetY = this.y + this.height + 1;
+    const targetX = this.x + this.width / 2;
+    const targetBlock = world.getTileAtPixel(targetX, targetY);
+    if (targetBlock === "stone") return;
+
+    world.setTileAtPixel(targetX, targetY, "empty");
+  }
+
+  private updateState(world: World) {
     const bottomY = this.y + this.height;
     const leftX = this.x + 1;
     const rightX = this.x + this.width - 1;
@@ -58,39 +80,57 @@ export class Npc {
       (tileBelowLeft && tileBelowLeft !== "empty") ||
       (tileBelowRight && tileBelowRight !== "empty")
     ) {
+      if (this.state !== "digging") this.state = "walking";
+    } else if (this.state !== "digging") {
+      this.state = "inAir";
+    }
+  }
+
+  private checkCollisions(world: World) {
+    const step = 1; // 1-tile step height
+    const bottomY = this.y + this.height;
+    const topOffset = 1;
+    const bottomOffset = this.height - 1;
+    const dir = this.direction;
+
+    const leftX = this.x + 1;
+    const rightX = this.x + this.width - 1;
+    const tileBelowLeft = world.getTileAtPixel(leftX, bottomY);
+    const tileBelowRight = world.getTileAtPixel(rightX, bottomY);
+    if (
+      (tileBelowLeft && tileBelowLeft !== "empty") ||
+      (tileBelowRight && tileBelowRight !== "empty")
+    ) {
       const tileY = Math.floor(bottomY / world.tileSize) * world.tileSize;
       this.y = tileY - this.height;
       this.vy = 0;
     }
 
-    const topOffset = 1;
-    const bottomOffset = this.height - 1;
+    const frontX = dir === 1 ? this.x + this.width + 1 : this.x - 1;
+    const tileFrontTop = world.getTileAtPixel(frontX, this.y + topOffset);
+    const tileFrontBottom = world.getTileAtPixel(frontX, this.y + bottomOffset);
 
-    const tileLeftTop = world.getTileAtPixel(this.x - 1, this.y + topOffset);
-    const tileLeftBottom = world.getTileAtPixel(
-      this.x - 1,
-      this.y + bottomOffset,
-    );
     if (
-      (tileLeftTop && tileLeftTop !== "empty") ||
-      (tileLeftBottom && tileLeftBottom !== "empty")
+      (tileFrontTop && tileFrontTop !== "empty") ||
+      (tileFrontBottom && tileFrontBottom !== "empty")
     ) {
-      this.direction = 1;
-    }
+      let canStep = true;
+      for (let i = 1; i <= step; i++) {
+        const tileAboveBottom = world.getTileAtPixel(
+          frontX,
+          this.y + bottomOffset - i * world.tileSize,
+        );
+        if (!tileAboveBottom || tileAboveBottom !== "empty") {
+          canStep = false;
+          break;
+        }
+      }
 
-    const tileRightTop = world.getTileAtPixel(
-      this.x + this.width + 1,
-      this.y + topOffset,
-    );
-    const tileRightBottom = world.getTileAtPixel(
-      this.x + this.width + 1,
-      this.y + bottomOffset,
-    );
-    if (
-      (tileRightTop && tileRightTop !== "empty") ||
-      (tileRightBottom && tileRightBottom !== "empty")
-    ) {
-      this.direction = -1;
+      if (canStep) {
+        this.y -= step * world.tileSize;
+      } else {
+        this.direction = -dir; // bounce off
+      }
     }
   }
 
@@ -106,7 +146,11 @@ export class Npc {
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = this.survived ? "green" : "red";
+    if (this.survived) ctx.fillStyle = "green";
+    else if (this.state === "digging") ctx.fillStyle = "orange";
+    else if (this.state === "inAir") ctx.fillStyle = "blue";
+    else ctx.fillStyle = "red"; // walking
+
     ctx.fillRect(this.x, this.y, this.width, this.height);
   }
 
@@ -120,15 +164,14 @@ export class Npc {
     );
   }
 
-  dig(world: World) {
-    const targetY = this.y + this.height + 1;
-    const targetBlock = world.getTileAtPixel(this.x, targetY);
-    if (targetBlock === "stone") return;
-
-    world.setTileAtPixel(this.x + this.width / 2, targetY, "empty");
+  dig() {
+    if (this.state !== "digging") {
+      this.state = "digging";
+      this.digTimer = 0;
+    }
   }
 
-  onClick(world: World) {
-    this.dig(world);
+  onClick() {
+    this.dig();
   }
 }

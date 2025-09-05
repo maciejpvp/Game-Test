@@ -131,7 +131,9 @@ export class Game {
 
     for (const npc of this.npcs) {
       if (npc.containsPoint(mouseX, mouseY)) {
-        npc.onClick(this.world);
+        console.log(`Called on click on: ${npc.x}`);
+        npc.onClick();
+        break;
       }
     }
   };
@@ -165,7 +167,7 @@ export class Game {
 
     for (const npc of this.npcs) {
       if (npc.containsPoint(mouseX, mouseY)) {
-        npc.onClick(this.world);
+        npc.onClick();
         return; // stop painting if clicked NPC
       }
     }
