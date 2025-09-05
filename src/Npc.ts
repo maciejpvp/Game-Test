@@ -25,7 +25,11 @@ export class Npc {
   vy: number;
   survived = false;
 
-  state: "inAir" | "walking" | "digging" = "inAir";
+  private health: number;
+  private fallStartY: number | null;
+  private readonly maxFallSafe = 32 * 3; // 3 Blocks
+
+  state: "inAir" | "walking" | "digging" | "death" = "inAir";
 
   private digTimer = 0;
   private readonly digDuration = 1; // seconds
@@ -38,10 +42,13 @@ export class Npc {
     this.speed = speed;
     this.direction = 1;
     this.vy = 0;
+
+    this.health = 100;
+    this.fallStartY = null;
   }
 
   update(dt: number, world: World, portal: EndPortal) {
-    if (this.survived) return;
+    if (this.survived || this.state === "death") return;
 
     this.vy += 500 * dt;
     this.y += this.vy * dt;
@@ -90,13 +97,32 @@ export class Npc {
     const tileBelowLeft = world.getTileAtPixel(leftX, bottomY);
     const tileBelowRight = world.getTileAtPixel(rightX, bottomY);
 
-    if (
-      (tileBelowLeft && tileBelowLeft !== "empty") ||
-      (tileBelowRight && tileBelowRight !== "empty")
-    ) {
-      if (this.state !== "digging") this.state = "walking";
-    } else if (this.state !== "digging") {
-      this.state = "inAir";
+    const isSolid = (tile: string | undefined) => tile && tile !== "empty";
+
+    const onGround = isSolid(tileBelowLeft) || isSolid(tileBelowRight);
+    if (this.state !== "digging") {
+      this.state = onGround ? "walking" : "inAir";
+    }
+    //Start Falling
+    if (this.state === "inAir" && this.fallStartY === null) {
+      console.log("Started Falling");
+      this.fallStartY = this.y;
+    }
+    //End Falling
+    if (this.state !== "inAir" && this.fallStartY !== null) {
+      const distance = this.y - this.fallStartY;
+      console.log(`Distance: ${distance}`);
+      if (distance > this.maxFallSafe) {
+        console.log("Give Damange");
+        this.health -= distance;
+      }
+      this.fallStartY = null;
+    }
+
+    //Check health
+
+    if (this.health <= 0) {
+      this.state = "death";
     }
   }
 
