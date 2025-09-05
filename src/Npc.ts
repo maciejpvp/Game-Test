@@ -56,7 +56,7 @@ export class Npc {
         console.log(blockBelow);
         this.performDig(world);
         this.digTimer = 0;
-        if (blockBelow === "empty") {
+        if (blockBelow === "empty" || blockBelow === "stone") {
           this.state = "inAir";
         }
       }
@@ -172,14 +172,22 @@ export class Npc {
     );
   }
 
-  dig() {
+  dig(world: World) {
     if (this.state !== "digging") {
       this.state = "digging";
       this.digTimer = 0;
+
+      const currentBlockX = Math.floor(this.x / world.tileSize);
+      this.x =
+        currentBlockX * world.tileSize + (world.tileSize - this.width) / 2;
+
+      // Also snap Y so feet align with block grid
+      const currentBlockY = Math.floor((this.y + this.height) / world.tileSize);
+      this.y = currentBlockY * world.tileSize - this.height;
     }
   }
 
-  onClick() {
-    this.dig();
+  onClick(world: World) {
+    this.dig(world);
   }
 }
