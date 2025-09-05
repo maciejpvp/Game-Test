@@ -23,6 +23,7 @@ export class Game {
   private isMouseDown = false;
 
   private npcs: Npc[] = [];
+  npcToSave: number;
   private lastTime = 0;
 
   // Camera
@@ -66,6 +67,7 @@ export class Game {
       y: this.level.npcSpawnpoint[1],
       npcCount: this.level.npcCount,
     });
+    this.npcToSave = this.level.npcCount;
 
     window.addEventListener("resize", () => this.resize());
     this.canvas.addEventListener("click", this.handleClick);

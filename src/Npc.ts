@@ -185,13 +185,35 @@ export class Npc {
   }
 
   draw(ctx: CanvasRenderingContext2D) {
+    // Color based on action
     if (this.survived) ctx.fillStyle = "green";
     else if (this.state === "digging") ctx.fillStyle = "orange";
     else if (this.state === "inAir") ctx.fillStyle = "blue";
     else if (this.state === "death") ctx.fillStyle = "black";
     else ctx.fillStyle = "red"; // walking
 
+    // Draw NPC Box
     ctx.fillRect(this.x, this.y, this.width, this.height);
+
+    // Draw Health
+    if (this.state !== "death" && !this.survived) {
+      const text = `${this.health} HP`;
+      ctx.font = "12px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+
+      const textX = this.x + this.width / 2;
+      const textY = this.y - 4; // Offset above NPC
+
+      // Outline
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 3;
+      ctx.strokeText(text, textX, textY);
+
+      // Main Text
+      ctx.fillStyle = "white";
+      ctx.fillText(text, textX, textY);
+    }
   }
 
   containsPoint(px: number, py: number): boolean {
