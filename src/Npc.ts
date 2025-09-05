@@ -49,8 +49,16 @@ export class Npc {
     if (this.state === "digging") {
       this.digTimer += dt;
       if (this.digTimer >= this.digDuration) {
+        const blockBelow = world.getTileAtPixel(
+          this.x + this.width / 2,
+          this.y + this.height + world.tileSize,
+        );
+        console.log(blockBelow);
         this.performDig(world);
         this.digTimer = 0;
+        if (blockBelow === "empty") {
+          this.state = "inAir";
+        }
       }
     }
 
