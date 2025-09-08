@@ -28,17 +28,27 @@ export class Npc {
   direction: number;
   vy: number;
   private hasParachute: boolean;
+  private isAMiner: boolean = false;
   survived = false;
 
   private health: number;
   private fallStartY: number | null;
   private readonly maxFallSafe = 32 * 3; // 3 Blocks
 
-  state: "inAir" | "walking" | "digging" | "death" | "stopothers" | "won" =
-    "inAir";
+  state:
+    | "inAir"
+    | "walking"
+    | "digging"
+    | "mining"
+    | "death"
+    | "stopothers"
+    | "won" = "inAir";
 
   private digTimer = 0;
   private readonly digDuration = 1; // seconds
+
+  private mineTimer = 0;
+  private readonly mineDuration = 1; // seconds
 
   // --- Animation State ---
   private frameIndex = 0;
@@ -66,7 +76,7 @@ export class Npc {
     this.vy = this.hasParachute ? 100 : this.vy + 500 * dt;
     this.y += this.vy * dt;
 
-    if (!["digging", "inAir"].includes(this.state)) {
+    if (!["digging", "inAir", "mining"].includes(this.state)) {
       this.x += this.speed * this.direction * dt;
     }
 
@@ -75,20 +85,22 @@ export class Npc {
     if (this.state === "digging") {
       this.digTimer += dt;
       if (this.digTimer >= this.digDuration) {
-        const blockBelow = world.getTileAtPixel(
-          this.x + this.width / 2,
-          this.y + this.height + world.tileSize,
-        );
         this.performDig(world);
         this.digTimer = 0;
-        if (blockBelow === "empty" || blockBelow === "stone") {
-          this.state = "inAir";
-        }
+        this.state = "inAir";
+      }
+    }
+
+    if (this.state === "mining") {
+      this.mineTimer += dt;
+      if (this.mineTimer >= this.mineDuration) {
+        this.performMine(world);
+        this.mineTimer = 0;
+        this.state = "walking";
       }
     }
 
     this.updateState(world);
-
     this.checkPortal(portal);
   }
 
@@ -111,6 +123,7 @@ export class Npc {
       }
     }
   }
+
   private performDig(world: World) {
     const targetY = this.y + this.height + 1;
     const targetX = this.x + this.width / 2;
@@ -118,6 +131,17 @@ export class Npc {
     if (targetBlock === "stone") return;
 
     world.setTileAtPixel(targetX, targetY, "empty");
+  }
+
+  private performMine(world: World) {
+    const targetX = this.direction === 1 ? this.x + this.width + 1 : this.x - 1;
+
+    const targetY = this.y + this.height / 2;
+    const targetBlock = world.getTileAtPixel(targetX, targetY);
+
+    if (targetBlock && targetBlock !== "empty") {
+      world.setTileAtPixel(targetX, targetY, "empty");
+    }
   }
 
   private updateState(world: World) {
@@ -131,12 +155,14 @@ export class Npc {
     const isSolid = (tile: string | undefined) => tile && tile !== "empty";
 
     const onGround = isSolid(tileBelowLeft) || isSolid(tileBelowRight);
-    if (this.state !== "digging") {
+    if (!["digging", "mining"].includes(this.state)) {
       this.state = onGround ? "walking" : "inAir";
     }
+
     if (this.state === "inAir" && this.fallStartY === null) {
       this.fallStartY = this.y;
     }
+
     if (this.state !== "inAir" && this.fallStartY !== null) {
       const distance = this.y - this.fallStartY;
       if (distance > this.maxFallSafe && !this.hasParachute) {
@@ -180,6 +206,14 @@ export class Npc {
       (tileFrontTop && tileFrontTop !== "empty") ||
       (tileFrontBottom && tileFrontBottom !== "empty")
     ) {
+      if (this.isAMiner) {
+        if (this.state !== "mining") {
+          this.state = "mining";
+          this.mineTimer = 0;
+        }
+        return;
+      }
+
       let canStep = true;
       if (tileFrontTop === "invisible") {
         canStep = false;
@@ -217,7 +251,6 @@ export class Npc {
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    //Hardcoded if its death and last animation img we wont render him
     if (this.state === "death" && this.frameIndex === 8) return;
 
     const frames = SPRITE_FRAMES[this.state];
@@ -262,7 +295,6 @@ export class Npc {
       ctx.fillRect(this.x, this.y, this.width, this.height);
     }
 
-    // Draw health above NPC
     if (this.state !== "death" && !this.survived) {
       const text = `${this.health} HP`;
       ctx.font = "12px Arial";
@@ -317,5 +349,6 @@ export class Npc {
     if (action === "dig") this.dig(world);
     if (action === "stopothers") this.stopOthers(world);
     if (action === "parachute") this.hasParachute = true;
+    if (action === "mine") this.isAMiner = true;
   }
 }

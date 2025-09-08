@@ -6,6 +6,7 @@ function defineButtons<T extends { label: string; id: string }>(
 
 const buttons = defineButtons([
   { label: "Dig", id: "dig" },
+  { label: "Mine", id: "mine" },
   { label: "Stop Others", id: "stopothers" },
   { label: "Parachute", id: "parachute" },
 ] as const);
