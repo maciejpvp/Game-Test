@@ -10,10 +10,10 @@ export class Game {
 
   private ctx: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
-  private level: Level;
-  private world: World;
-  private portal: EndPortal;
-  private startPortal: StartPortal;
+  private level!: Level;
+  private world!: World;
+  private portal!: EndPortal;
+  private startPortal!: StartPortal;
   private hud: HUD;
   private levelIndex: number;
 
@@ -24,7 +24,6 @@ export class Game {
   private isMouseDown = false;
 
   private npcs: Npc[] = [];
-  npcToSave: number;
   private lastTime = 0;
 
   // Camera
@@ -41,35 +40,12 @@ export class Game {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
-    this.levelIndex = 0;
-    this.level = Levels[this.levelIndex];
     this.hud = new HUD();
 
-    //Setup Camera
-    this.cameraX = this.level.cameraStartPos[0];
-    this.cameraY = this.level.cameraStartPos[1];
-    this.cameraZoom = this.level.cameraStartZoom;
+    this.levelIndex = 1;
+    this.loadLevel(this.levelIndex);
 
     this.resize();
-
-    this.world = new World({
-      width: this.worldWidth,
-      height: this.worldHeight,
-      tileSize: this.tileSize,
-      blocks: this.level.blocks,
-    });
-    this.portal = new EndPortal(
-      this.level.endPortalCords[0],
-      this.level.endPortalCords[1],
-      50,
-      80,
-    );
-    this.startPortal = new StartPortal({
-      x: this.level.npcSpawnpoint[0],
-      y: this.level.npcSpawnpoint[1],
-      npcCount: this.level.npcCount,
-    });
-    this.npcToSave = this.level.npcCount;
 
     window.addEventListener("resize", () => this.resize());
     this.canvas.addEventListener("click", this.handleClick);
@@ -83,6 +59,7 @@ export class Game {
     this.canvas.addEventListener("mousemove", (e) => this.drag(e));
     this.canvas.addEventListener("mouseup", () => (this.isDragging = false));
     this.canvas.addEventListener("mouseleave", () => (this.isDragging = false));
+
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) {
         this.lastTime = performance.now();
@@ -191,13 +168,25 @@ export class Game {
       npc.update(dt, this.world, this.portal);
     }
 
-    // Game ends if all NPCs survived
-    const filtered = this.npcs
-      .filter((n) => ["walking", "inAir"].includes(n.state))
-      .every((n) => n.survived);
-    if (this.npcs.length !== 0 && filtered) {
+    const filtered = this.npcs.filter((n) =>
+      ["walking", "inAir"].includes(n.state),
+    );
+
+    const allSurvived =
+      filtered.length > 0 && filtered.every((n) => n.survived);
+
+    const allDeath = this.npcs.every(
+      (n) => !["walking", "inAir"].includes(n.state),
+    );
+
+    if (this.npcs.length !== 0 && allSurvived) {
       this.hud.showNextLevelOverlay(this.nextLevel);
       this.npcs = [];
+    }
+
+    if (this.npcs.length !== 0 && allDeath) {
+      console.log("ALl Dead");
+      this.resetLevel();
     }
   }
 
@@ -246,24 +235,14 @@ export class Game {
     requestAnimationFrame(this.loop);
   };
 
-  private nextLevel = () => {
-    console.log("Loading Next Level");
-
-    // Go to next level if it exists
-    if (this.levelIndex + 1 >= Levels.length) {
-      console.log("No more levels!");
-      return;
-    }
-
-    this.levelIndex++;
+  private loadLevel(index: number) {
+    this.levelIndex = index;
     this.level = Levels[this.levelIndex];
 
-    // Reset camera
     this.cameraX = this.level.cameraStartPos[0];
     this.cameraY = this.level.cameraStartPos[1];
     this.cameraZoom = this.level.cameraStartZoom;
 
-    // Recreate world & portals
     this.world = new World({
       width: this.worldWidth,
       height: this.worldHeight,
@@ -285,8 +264,19 @@ export class Game {
     });
 
     this.npcs = [];
-    this.npcToSave = this.level.npcCount;
 
     console.log(`Loaded level ${this.levelIndex}`);
+  }
+
+  private nextLevel = () => {
+    if (this.levelIndex + 1 >= Levels.length) {
+      console.log("No more levels!");
+      return;
+    }
+    this.loadLevel(this.levelIndex + 1);
+  };
+
+  private resetLevel = () => {
+    this.loadLevel(this.levelIndex);
   };
 }
