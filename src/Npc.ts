@@ -33,7 +33,8 @@ export class Npc {
   private fallStartY: number | null;
   private readonly maxFallSafe = 32 * 3; // 3 Blocks
 
-  state: "inAir" | "walking" | "digging" | "death" | "stopothers" = "inAir";
+  state: "inAir" | "walking" | "digging" | "death" | "stopothers" | "won" =
+    "inAir";
 
   private digTimer = 0;
   private readonly digDuration = 1; // seconds

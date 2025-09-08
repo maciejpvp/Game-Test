@@ -19,7 +19,6 @@ export class World {
     this.tileSize = tileSize;
 
     const tiles = decodeWorld(blocks, width, height);
-
     this.tiles = tiles;
 
     //eslint-disable-next-line

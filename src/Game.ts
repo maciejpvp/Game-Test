@@ -6,7 +6,7 @@ import { StartPortal } from "./StartPortal";
 import { World, type Tile } from "./World";
 
 export class Game {
-  static EDITOR = true;
+  static EDITOR = false;
 
   private ctx: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
@@ -15,6 +15,7 @@ export class Game {
   private portal: EndPortal;
   private startPortal: StartPortal;
   private hud: HUD;
+  private levelIndex: number;
 
   private worldWidth = 60;
   private worldHeight = 40;
@@ -40,7 +41,8 @@ export class Game {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
-    this.level = Levels["First"];
+    this.levelIndex = 0;
+    this.level = Levels[this.levelIndex];
     this.hud = new HUD();
 
     //Setup Camera
@@ -130,6 +132,7 @@ export class Game {
   }
 
   private handleClick = (e: MouseEvent) => {
+    if (Game.EDITOR) return;
     const rect = this.canvas.getBoundingClientRect();
     const mouseX = (e.clientX - rect.left) / this.cameraZoom + this.cameraX;
     const mouseY = (e.clientY - rect.top) / this.cameraZoom + this.cameraY;
@@ -169,13 +172,6 @@ export class Game {
     const mouseX = (e.clientX - rect.left) / this.cameraZoom + this.cameraX;
     const mouseY = (e.clientY - rect.top) / this.cameraZoom + this.cameraY;
 
-    for (const npc of this.npcs) {
-      if (npc.containsPoint(mouseX, mouseY)) {
-        npc.onClick({ action: this.hud.selectedAction, world: this.world });
-        return; // stop painting if clicked NPC
-      }
-    }
-
     const blockType: Tile = e.shiftKey ? "empty" : e.ctrlKey ? "stone" : "dirt";
 
     this.world.handleEditorClick(mouseX, mouseY, blockType);
@@ -196,8 +192,12 @@ export class Game {
     }
 
     // Game ends if all NPCs survived
-    if (this.npcs.length !== 0 && this.npcs.every((npc) => npc.survived)) {
-      alert("All NPCs survived! Game Over 🎉");
+    const filtered = this.npcs
+      .filter((n) => ["walking", "inAir"].includes(n.state))
+      .every((n) => n.survived);
+    if (this.npcs.length !== 0 && filtered) {
+      this.hud.showNextLevelOverlay(this.nextLevel);
+      this.npcs = [];
     }
   }
 
@@ -244,5 +244,49 @@ export class Game {
     this.draw();
 
     requestAnimationFrame(this.loop);
+  };
+
+  private nextLevel = () => {
+    console.log("Loading Next Level");
+
+    // Go to next level if it exists
+    if (this.levelIndex + 1 >= Levels.length) {
+      console.log("No more levels!");
+      return;
+    }
+
+    this.levelIndex++;
+    this.level = Levels[this.levelIndex];
+
+    // Reset camera
+    this.cameraX = this.level.cameraStartPos[0];
+    this.cameraY = this.level.cameraStartPos[1];
+    this.cameraZoom = this.level.cameraStartZoom;
+
+    // Recreate world & portals
+    this.world = new World({
+      width: this.worldWidth,
+      height: this.worldHeight,
+      tileSize: this.tileSize,
+      blocks: this.level.blocks,
+    });
+
+    this.portal = new EndPortal(
+      this.level.endPortalCords[0],
+      this.level.endPortalCords[1],
+      50,
+      80,
+    );
+
+    this.startPortal = new StartPortal({
+      x: this.level.npcSpawnpoint[0],
+      y: this.level.npcSpawnpoint[1],
+      npcCount: this.level.npcCount,
+    });
+
+    this.npcs = [];
+    this.npcToSave = this.level.npcCount;
+
+    console.log(`Loaded level ${this.levelIndex}`);
   };
 }
