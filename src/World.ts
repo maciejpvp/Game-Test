@@ -77,7 +77,7 @@ export class World {
   }
 
   handleEditorClick(px: number, py: number, block: Tile) {
-    this.setTileAtPixel(px, py, "invisible");
+    this.setTileAtPixel(px, py, block);
   }
 
   createEmptyWorld(width: number, height: number) {
