@@ -185,7 +185,6 @@ export class Game {
     }
 
     if (this.npcs.length !== 0 && allDeath) {
-      console.log("ALl Dead");
       this.resetLevel();
     }
   }
@@ -264,13 +263,10 @@ export class Game {
     });
 
     this.npcs = [];
-
-    console.log(`Loaded level ${this.levelIndex}`);
   }
 
   private nextLevel = () => {
     if (this.levelIndex + 1 >= Levels.length) {
-      console.log("No more levels!");
       return;
     }
     this.loadLevel(this.levelIndex + 1);

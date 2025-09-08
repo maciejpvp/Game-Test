@@ -27,6 +27,7 @@ export class Npc {
   speed: number;
   direction: number;
   vy: number;
+  private hasParachute: boolean;
   survived = false;
 
   private health: number;
@@ -55,13 +56,14 @@ export class Npc {
 
     this.health = 100;
     this.fallStartY = null;
+    this.hasParachute = false;
   }
 
   update(dt: number, world: World, portal: EndPortal) {
     this.updateAnimation(dt);
     if (this.survived || ["death", "stopothers"].includes(this.state)) return;
 
-    this.vy += 500 * dt;
+    this.vy = this.hasParachute ? 100 : this.vy + 500 * dt;
     this.y += this.vy * dt;
 
     if (!["digging", "inAir"].includes(this.state)) {
@@ -137,8 +139,10 @@ export class Npc {
     }
     if (this.state !== "inAir" && this.fallStartY !== null) {
       const distance = this.y - this.fallStartY;
-      if (distance > this.maxFallSafe) {
+      if (distance > this.maxFallSafe && !this.hasParachute) {
         this.health -= distance;
+      } else if (distance > this.maxFallSafe && this.hasParachute) {
+        this.hasParachute = false;
       }
       this.fallStartY = null;
     }
@@ -312,5 +316,6 @@ export class Npc {
     if (this.state !== "walking") return;
     if (action === "dig") this.dig(world);
     if (action === "stopothers") this.stopOthers(world);
+    if (action === "parachute") this.hasParachute = true;
   }
 }

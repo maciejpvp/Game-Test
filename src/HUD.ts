@@ -7,6 +7,7 @@ function defineButtons<T extends { label: string; id: string }>(
 const buttons = defineButtons([
   { label: "Dig", id: "dig" },
   { label: "Stop Others", id: "stopothers" },
+  { label: "Parachute", id: "parachute" },
 ] as const);
 
 export type SelectedActionType = (typeof buttons)[number]["id"] | null;
@@ -106,7 +107,6 @@ export class HUD {
     nextBtn.style.boxShadow = "2px 2px 8px rgba(0,0,0,0.6)";
 
     nextBtn.onclick = () => {
-      console.log("Load next level here!");
       nextLevel();
       this.hideOverlay();
     };
